@@ -1,14 +1,107 @@
 let currentFolder = '';
 
+// Funkce pro získání překladu
+function t(key, fallback = '') {
+    const keys = key.split('.');
+    let value = translations;
+    
+    for (const k of keys) {
+        if (value && value[k]) {
+            value = value[k];
+        } else {
+            return fallback || key;
+        }
+    }
+    
+    return value;
+}
+
+// Funkce pro ovládání jazykového dropdownu
+function toggleLanguageDropdown(event) {
+    event.preventDefault();
+    const menu = document.getElementById('languageDropdownMenu');
+    const isVisible = menu.style.display === 'block';
+    
+    // Zavřít všechny ostatní dropdowny
+    document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+    
+    // Přepnout viditelnost
+    menu.style.display = isVisible ? 'none' : 'block';
+}
+
+// Zavřít dropdown při kliknutí mimo něj
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('languageDropdown');
+    const menu = document.getElementById('languageDropdownMenu');
+    
+    if (!dropdown.contains(event.target) && !menu.contains(event.target)) {
+        menu.style.display = 'none';
+    }
+});
+
+// Funkce pro změnu jazyka
+function changeLanguage(lang) {
+    // Zavřít dropdown
+    document.getElementById('languageDropdownMenu').style.display = 'none';
+    
+    fetch('save_language.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang })
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Chyba při změně jazyka');
+        }
+        return res.text();
+    })
+    .then(() => {
+        location.reload();
+    })
+    .catch(err => {
+        console.error(err);
+        showFlash('danger', 'Nepodařilo se změnit jazyk.');
+    });
+}
+
 // Fulltext
 document.getElementById('search').addEventListener('input', function () {
     const q = this.value.toLowerCase();
+    let visibleCount = 0;
+    
     document.querySelectorAll('.project').forEach(el => {
         const name = el.dataset.name;
         const tags = el.dataset.tags;
-        el.style.display = (name.includes(q) || tags.includes(q)) ? '' : 'none';
+        const isVisible = name.includes(q) || tags.includes(q);
+        el.style.display = isVisible ? '' : 'none';
+        if (isVisible) visibleCount++;
     });
+    
+    // Zobrazit/skrýt zprávu o žádných výsledcích
+    showNoResultsMessage(q !== '' && visibleCount === 0);
 });
+
+// Funkce pro zobrazení zprávy o žádných výsledcích
+function showNoResultsMessage(show) {
+    let noResultsEl = document.getElementById('no-results-message');
+    
+    if (show && !noResultsEl) {
+        noResultsEl = document.createElement('div');
+        noResultsEl.id = 'no-results-message';
+        noResultsEl.className = 'col-12 text-center py-5';
+        noResultsEl.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon">
+                    <i class="ti ti-search icon"></i>
+                </div>
+                <p class="empty-title">${t('app.search_no_results')}</p>
+            </div>
+        `;
+        document.getElementById('projects').appendChild(noResultsEl);
+    } else if (!show && noResultsEl) {
+        noResultsEl.remove();
+    }
+}
 
 // Filtrace podle skupiny
 document.querySelectorAll('#groupTabs .btn').forEach(btn => {
@@ -31,7 +124,7 @@ document.querySelectorAll('#groupTabs .btn').forEach(btn => {
 function submitEdit() {
     const title = document.getElementById('edit-title').value.trim();
     if (title === '') {
-        showFlash('danger', 'Název projektu nesmí být prázdný.');
+        showFlash('danger', t('messages.name_required'));
         return;
     }
 
@@ -49,20 +142,20 @@ function submitEdit() {
     })
         .then(res => {
             if (!res.ok) {
-                showFlash('danger', 'Chyba!', 'Chyba při uložení dat.');
-                throw new Error('Chyba při uložení dat.');
+                showFlash('danger', t('messages.error'), t('messages.save_error'));
+                throw new Error(t('messages.save_error'));
             }
             return res.text();
         })
         .then(() => {
-            showFlash('success', 'Projekt byl úspěšně uložen.');
+            showFlash('success', t('messages.save_success'));
             const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
             modal.hide();
             setTimeout(() => location.reload(), 5000);
         })
         .catch(err => {
             console.error(err);
-            showFlash('danger', 'Nepodařilo se uložit projekt.');
+            showFlash('danger', t('messages.save_failed'));
         });
 }
 function editProject(folder) {
@@ -137,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const theme = savedTheme || (prefersDark ? 'dark' : 'light');
 
-  applyTheme(theme); // správně nastaví i ikonky
+  applyTheme(theme)
 
   document.getElementById('setDark')?.addEventListener('click', e => {
     e.preventDefault();
@@ -148,6 +241,9 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     applyTheme('light');
   });
+
+  const dropdownElementList = document.querySelectorAll('.dropdown-toggle');
+  const dropdownList = [...dropdownElementList].map(dropdownToggleEl => new bootstrap.Dropdown(dropdownToggleEl));
 });
 
 

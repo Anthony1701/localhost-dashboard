@@ -1,7 +1,13 @@
 <?php
+require_once __DIR__ . '/translations.php';
+
 $projectsPath = realpath(__DIR__ . '/../');
 $configFile = __DIR__ . '/config.json';
-$config = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : ['projects' => [], 'default' => ''];
+$config = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : ['projects' => [], 'default' => '', 'language' => 'cs'];
+
+$currentLanguage = getCurrentLanguage($config);
+$translations = loadTranslations($currentLanguage);
+$availableLanguages = getAvailableLanguages();
 
 $projects = $config['projects'] ?? [];
 $default = $config['default'] ?? '';
@@ -75,6 +81,10 @@ ksort($groups);
         body {
             height: auto;
         }
+
+        .dropdown-menu  {
+            top: 100%
+        }
     </style>
 </head>
 
@@ -92,18 +102,35 @@ ksort($groups);
                     <span class="input-icon-addon">
                     <i class="ti ti-search icon"></i>
                     </span>
-                    <input type="search" class="form-control" id="search" placeholder="Hledat projekty…" aria-label="Search">
+                    <input type="search" class="form-control" id="search" placeholder="<?= htmlspecialchars(t($translations, 'app.search_placeholder')) ?>" aria-label="Search">
                 </div>
             </form>
 
             <div class="navbar-nav flex-row order-md-last ms-auto">
+                <div class="nav-item dropdown position-relative">
+                    <a class="nav-link px-2" href="#" id="languageDropdown" onclick="toggleLanguageDropdown(event)" title="<?= htmlspecialchars(t($translations, 'language.select')) ?>">
+                        <i class="ti ti-language icon me-1"></i>
+                        <span class="d-none d-sm-inline"><?= strtoupper($currentLanguage) ?></span>
+                        <i class="ti ti-chevron-down ms-1"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" id="languageDropdownMenu" style="display: none;">
+                        <?php foreach ($availableLanguages as $lang): ?>
+                            <li>
+                                <a class="dropdown-item <?= $lang === $currentLanguage ? 'active' : '' ?>" 
+                                   href="#" onclick="event.preventDefault(); changeLanguage('<?= $lang ?>')">
+                                    <?= htmlspecialchars(t($translations, "language." . ($lang === 'cs' ? 'czech' : 'english'))) ?>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
                 <div class="nav-item">
                     <a href="#" class="nav-link px-0  hide-theme-dark" id="setDark" data-bs-toggle="tooltip"
-                        data-bs-placement="bottom" aria-label="Tmavý režim" data-bs-original-title="Tmavý režim">
+                        data-bs-placement="bottom" aria-label="<?= htmlspecialchars(t($translations, 'app.dark_mode')) ?>" data-bs-original-title="<?= htmlspecialchars(t($translations, 'app.dark_mode')) ?>">
                          <i class="ti ti-moon icon icon-1"></i>
                     </a>
                     <a href="#" class="nav-link px-0  hide-theme-light" id="setLight" data-bs-toggle="tooltip"
-                        data-bs-placement="bottom" aria-label="Světlý režim" data-bs-original-title="Světlý režim">
+                        data-bs-placement="bottom" aria-label="<?= htmlspecialchars(t($translations, 'app.light_mode')) ?>" data-bs-original-title="<?= htmlspecialchars(t($translations, 'app.light_mode')) ?>">
                         <i class="ti ti-sun icon icon-1"></i>
                     </a>
                 </div>
@@ -116,7 +143,7 @@ ksort($groups);
         </div>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 mt-3">
             <div class="btn-list mb-0" id="groupTabs">
-                <a href="#" class="btn btn-outline-primary active" data-group="all">Vše</a>
+                <a href="#" class="btn btn-outline-primary active" data-group="all"><?= htmlspecialchars(t($translations, 'navigation.all')) ?></a>
                 <?php foreach (array_keys($groups) as $group): ?>
                     <a href="#" class="btn btn-outline-primary" data-group="<?= htmlspecialchars($group) ?>">
                         <?= htmlspecialchars($group) ?>
@@ -125,11 +152,11 @@ ksort($groups);
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <label for="sort" class="form-label mb-0">Řadit podle:</label>
+                <label for="sort" class="form-label mb-0"><?= htmlspecialchars(t($translations, 'navigation.sort_by')) ?></label>
                 <select id="sort" class="form-select w-auto">
-                    <option value="az">Název A–Z</option>
-                    <option value="za">Název Z–A</option>
-                    <option value="modified">Poslední úprava</option>
+                    <option value="az"><?= htmlspecialchars(t($translations, 'navigation.sort_az')) ?></option>
+                    <option value="za"><?= htmlspecialchars(t($translations, 'navigation.sort_za')) ?></option>
+                    <option value="modified"><?= htmlspecialchars(t($translations, 'navigation.sort_modified')) ?></option>
                 </select>
             </div>
         </div>
@@ -175,7 +202,7 @@ ksort($groups);
 
                                 <a href="#" onclick="event.preventDefault(); editProject('<?= $folder ?>')"
                                     class="btn btn-sm btn-outline-primary position-relative z-1">
-                                    <i class="ti ti-edit me-1"></i> Upravit
+                                    <i class="ti ti-edit me-1"></i> <?= htmlspecialchars(t($translations, 'project.edit')) ?>
                                 </a>
                             </div>
                         </div>
@@ -190,37 +217,37 @@ ksort($groups);
                 <div class="modal-content">
                     <form onsubmit="submitEdit(); return false;">
                         <div class="modal-header">
-                            <h5 class="modal-title">Úprava projektu: <span id="edit-project-name"
+                            <h5 class="modal-title"><?= htmlspecialchars(t($translations, 'project.edit_title')) ?> <span id="edit-project-name"
                                     class="text-muted"></span></h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                aria-label="Zavřít"></button>
+                                aria-label="<?= htmlspecialchars(t($translations, 'project.close')) ?>"></button>
                         </div>
                         <div class="modal-body">
                             <input type="hidden" id="edit-folder">
                             <div class="mb-3">
-                                <label class="form-label">Název</label>
+                                <label class="form-label"><?= htmlspecialchars(t($translations, 'project.name')) ?></label>
                                 <input type="text" class="form-control" id="edit-title" required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Popis</label>
+                                <label class="form-label"><?= htmlspecialchars(t($translations, 'project.description')) ?></label>
                                 <input type="text" class="form-control" id="edit-description">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Tagy (čárkou oddělené)</label>
+                                <label class="form-label"><?= htmlspecialchars(t($translations, 'project.tags')) ?></label>
                                 <input type="text" class="form-control" id="edit-tags">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Skupina</label>
+                                <label class="form-label"><?= htmlspecialchars(t($translations, 'project.group')) ?></label>
                                 <input type="text" class="form-control" id="edit-group">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Entry (např. www)</label>
+                                <label class="form-label"><?= htmlspecialchars(t($translations, 'project.entry')) ?></label>
                                 <input type="text" class="form-control" id="edit-entry">
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-1"></i> Uložit</button>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                            <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-1"></i> <?= htmlspecialchars(t($translations, 'project.save')) ?></button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= htmlspecialchars(t($translations, 'project.cancel')) ?></button>
                         </div>
                     </form>
                 </div>
@@ -232,9 +259,8 @@ ksort($groups);
             <div class="row text-center align-items-center flex-column">
                 <div class="col-auto">
                     <small class="text-muted">
-                        &copy; <?= date('Y') ?> Localhost Dashboard – vytvořil <a href="https://simkanin.cz"
-                            target="_blank" rel="noopener" class="text-reset text-decoration-underline">Antonín
-                            Šimkanin</a>
+                        &copy; <?= date('Y') ?> <?= htmlspecialchars(t($translations, 'footer.copyright')) ?> <a href="https://simkanin.cz"
+                            target="_blank" rel="noopener" class="text-reset text-decoration-underline"><?= htmlspecialchars(t($translations, 'footer.author')) ?></a>
                     </small>
                 </div>
             </div>
@@ -242,7 +268,11 @@ ksort($groups);
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
-    <script>const config = <?= json_encode($projects) ?>;</script>
+    <script>
+        const config = <?= json_encode($projects) ?>;
+        const translations = <?= json_encode($translations) ?>;
+        const currentLanguage = '<?= $currentLanguage ?>';
+    </script>
     <script src="./assets/scripts.js"></script>
 </body>
 

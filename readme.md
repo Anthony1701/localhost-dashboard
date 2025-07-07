@@ -1,6 +1,6 @@
 # 🧭 Localhost Dashboard
 
-A modern PHP-based dashboard for managing your local web development projects. Designed to auto-detect local folders, support metadata editing via GUI, tagging, search, dark mode toggle, and more — all with a clean [Tabler UI](https://tabler.io/).
+A modern PHP-based dashboard for managing your local web development projects. Designed to auto-detect local folders, support metadata editing via GUI, tagging, search, dark mode toggle, multi-language support, and more — all with a clean [Tabler UI](https://tabler.io/).
 
 ---
 
@@ -8,12 +8,33 @@ A modern PHP-based dashboard for managing your local web development projects. D
 
 * Auto-detects projects from the parent directory
 * GUI-based project metadata editing (title, description, tags, group, entry point)
+* **Multi-language support** (Czech and English)
 * Project grouping and filtering
 * Full-text search with tag support
 * Sorting (A–Z, Z–A, last modified)
 * Light/Dark theme switch with localStorage persistence
 * Sticky header with Tabler icons and responsive design
 * Last modification time and project size display (optional)
+
+---
+
+## 🌍 Language Support
+
+The dashboard supports multiple languages:
+
+* **Czech (cs)** - Default language
+* **English (en)**
+
+Language can be changed via:
+1. The language dropdown in the top navigation
+2. Manual configuration in `config.json`
+3. Programmatically via the `save_language.php` endpoint
+
+### Adding New Languages
+
+1. Create a new language file in the `lang/` directory (e.g., `lang/de.json`)
+2. Copy the structure from `lang/en.json` and translate all values
+3. The language will be automatically detected and available in the dropdown
 
 ---
 
@@ -43,6 +64,7 @@ All configuration is stored in `config.json`. You can manually edit it or use th
 ```json
 {
   "default": "my-project",
+  "language": "cs",
   "projects": {
     "my-project": {
       "title": "My Project",
@@ -54,6 +76,12 @@ All configuration is stored in `config.json`. You can manually edit it or use th
   }
 }
 ```
+
+### Configuration Options
+
+* `default` - Default project to redirect to (optional)
+* `language` - Interface language (cs/en, defaults to cs)
+* `projects` - Project metadata storage
 
 ---
 
@@ -72,11 +100,23 @@ Built with [Tabler UI](https://tabler.io/) (CDN only). You can customize styles 
 ├── dashboard/
 │   ├── index.php
 │   ├── save.php
+│   ├── save_language.php
+│   ├── translations.php
 │   ├── config.json
+│   ├── lang/
+│   │   ├── cs.json
+│   │   └── en.json
 │   ├── assets/
 │   │   ├── scripts.js
 │   │   └── icon.svg
 ```
+
+---
+
+## 🔧 API Endpoints
+
+* `save.php` - Save project metadata (POST)
+* `save_language.php` - Change interface language (POST)
 
 ---
 
